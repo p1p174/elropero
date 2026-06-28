@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import emailjs from "@emailjs/browser";
 
-const EMAILJS_SERVICE  = "service_5zjd20q";
-const EMAILJS_TEMPLATE = "template_08vj2xx";
-const EMAILJS_KEY      = "Zq_AhXWmfmSKAnUCf";
+const EMAILJS_SERVICE       = "service_5zjd20q";
+const EMAILJS_TEMPLATE_ADMIN  = "template_08vj2xx";
+const EMAILJS_TEMPLATE_CLIENTE = "template_uzsmqwl";
+const EMAILJS_KEY           = "Zq_AhXWmfmSKAnUCf";
+const ADMIN_EMAIL           = "roperoseconhand@gmail.com";
 
 const CATEGORIAS = ["Tops","Pantalones","Vestidos","Buzos / Camperas","Calzado","Accesorios","Otro"];
 const TALLES     = ["XS","S","M","L","XL","XXL","Único","35","36","37","38","39","40","41","42"];
@@ -61,9 +63,17 @@ const Divider = () => (
   </div>
 );
 
-const HeaderPublico = () => (
+const HeaderPublico = ({ carrito, onVerCarrito }) => (
   <div style={{ background:C.bg, borderBottom:`1px solid ${C.border}`, padding:"28px 20px 0", textAlign:"center" }}>
     <div style={{ maxWidth:560, margin:"0 auto" }}>
+      <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:4 }}>
+        <button onClick={onVerCarrito} style={{ background:"none", border:"none", cursor:"pointer", position:"relative", padding:4 }}>
+          <span style={{ fontSize:22 }}>🛍️</span>
+          {carrito.length > 0 && (
+            <span style={{ position:"absolute", top:0, right:0, background:C.brown, color:"#fff", borderRadius:99, fontSize:10, fontWeight:700, padding:"1px 5px", fontFamily:sans }}>{carrito.length}</span>
+          )}
+        </button>
+      </div>
       <p style={{ margin:"0 0 4px", fontSize:10, color:C.muted, letterSpacing:4, textTransform:"uppercase", fontFamily:sans }}>· second hand ·</p>
       <h1 style={{ margin:"0 0 4px", fontSize:36, fontWeight:700, color:C.brown, fontFamily:serif, letterSpacing:-0.5 }}>El Ropero</h1>
       <p style={{ margin:"0 0 20px", fontSize:13, color:C.muted, fontStyle:"italic", fontFamily:serif }}>Ropa con historia, precios sin drama</p>
@@ -104,92 +114,9 @@ function Galeria({ imgs, nombre }){
   );
 }
 
-function FormCompra({ p, onComprar, onCancelar }){
-  const [form, setForm] = useState({
-    nombre:"", tel:"", metodo_pago:"efectivo",
-    tipo_entrega:"retira", departamento:"", direccion:""
-  });
-  const [enviando, setEnviando] = useState(false);
-  const f = (k,v) => setForm(prev=>({...prev,[k]:v}));
-  const ok = form.nombre.trim() && form.tel.trim() && (form.tipo_entrega==="retira" || (form.departamento && form.direccion.trim()));
-
-  const confirmar = async () => {
-    if(!ok||enviando) return;
-    setEnviando(true);
-    await onComprar(p, form);
-    setEnviando(false);
-  };
-
-  return (
-    <div style={{ background:C.bgWarm, borderRadius:12, padding:16, border:`1px solid ${C.border}` }}>
-      <p style={{ margin:"0 0 14px", fontSize:15, fontWeight:600, color:C.brown, fontFamily:serif }}>Datos de compra</p>
-
-      <div style={{ marginBottom:10 }}>
-        <p style={{ margin:"0 0 4px", fontSize:12, color:C.muted, fontWeight:600, fontFamily:sans, textTransform:"uppercase", letterSpacing:0.5 }}>Nombre *</p>
-        <input placeholder="Tu nombre" value={form.nombre} onChange={e=>f("nombre",e.target.value)} style={inp()}/>
-      </div>
-
-      <div style={{ marginBottom:10 }}>
-        <p style={{ margin:"0 0 4px", fontSize:12, color:C.muted, fontWeight:600, fontFamily:sans, textTransform:"uppercase", letterSpacing:0.5 }}>Teléfono *</p>
-        <input placeholder="Tu teléfono" type="tel" value={form.tel} onChange={e=>f("tel",e.target.value)} style={inp()}/>
-      </div>
-
-      <div style={{ marginBottom:10 }}>
-        <p style={{ margin:"0 0 8px", fontSize:12, color:C.muted, fontWeight:600, fontFamily:sans, textTransform:"uppercase", letterSpacing:0.5 }}>Método de pago</p>
-        <div style={{ display:"flex", gap:8 }}>
-          {[["efectivo","Efectivo"],["transferencia","Transferencia"]].map(([val,label])=>(
-            <button key={val} onClick={()=>f("metodo_pago",val)} style={{ flex:1, background:form.metodo_pago===val?C.brown:C.card, border:`1.5px solid ${form.metodo_pago===val?C.brown:C.border}`, color:form.metodo_pago===val?"#fff":C.muted, borderRadius:8, padding:"10px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sans }}>{label}</button>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ marginBottom:10 }}>
-        <p style={{ margin:"0 0 8px", fontSize:12, color:C.muted, fontWeight:600, fontFamily:sans, textTransform:"uppercase", letterSpacing:0.5 }}>Entrega</p>
-        <div style={{ display:"flex", gap:8, marginBottom:10 }}>
-          {[["retira","Retiro en local"],["envio","Envío"]].map(([val,label])=>(
-            <button key={val} onClick={()=>f("tipo_entrega",val)} style={{ flex:1, background:form.tipo_entrega===val?C.brown:C.card, border:`1.5px solid ${form.tipo_entrega===val?C.brown:C.border}`, color:form.tipo_entrega===val?"#fff":C.muted, borderRadius:8, padding:"10px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sans }}>{label}</button>
-          ))}
-        </div>
-        {form.tipo_entrega==="envio" && (
-          <>
-            <select value={form.departamento} onChange={e=>f("departamento",e.target.value)} style={{ ...inp(), marginBottom:8 }}>
-              <option value="">Seleccioná tu departamento</option>
-              {DEPARTAMENTOS.map(d=><option key={d}>{d}</option>)}
-            </select>
-            <input placeholder="Dirección completa" value={form.direccion} onChange={e=>f("direccion",e.target.value)} style={inp()}/>
-          </>
-        )}
-      </div>
-
-      <div style={{ display:"flex", gap:8, marginTop:14 }}>
-        <Btn variant="ghost" onClick={onCancelar}>Cancelar</Btn>
-        <button onClick={confirmar} disabled={!ok||enviando} style={{ flex:1, background:ok&&!enviando?C.brown:"#ccc", color:"#fff", border:"none", borderRadius:8, padding:"11px", fontSize:14, fontWeight:600, cursor:ok&&!enviando?"pointer":"not-allowed", fontFamily:sans }}>
-          {enviando ? "Procesando..." : "Confirmar compra"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function CardCliente({ p, onReservar, onComprar }){
-  const [modo, setModo]     = useState(null); // null | "reservar" | "comprar"
-  const [form, setForm]     = useState({ nombre:"", cel:"" });
-  const [listo, setListo]   = useState(false);
+function CardCliente({ p, enCarrito, onAgregarCarrito }){
   const [detalle, setDetalle] = useState(false);
-
-  const confirmarReserva = () => {
-    if(!form.nombre.trim()||!form.cel.trim()) return;
-    onReservar(p.id, form);
-    setListo(true); setModo(null);
-  };
-
-  const confirmarCompra = async (prenda, datos) => {
-    await onComprar(prenda, datos);
-    setListo(true); setModo(null);
-  };
-
   const imgs = p.fotos?.length ? p.fotos : [];
-
   return (
     <div style={{ background:C.card, borderRadius:16, border:`1px solid ${C.border}`, overflow:"hidden", marginBottom:20, boxShadow:"0 2px 12px #0000000a" }}>
       {imgs.length === 0
@@ -211,34 +138,185 @@ function CardCliente({ p, onReservar, onComprar }){
             {p.descripcion.length>80 && <span onClick={()=>setDetalle(!detalle)} style={{ color:C.accent, cursor:"pointer", marginLeft:4, fontWeight:600 }}>{detalle?"ver menos":"ver más"}</span>}
           </p>
         )}
-
-        {listo
-          ? <div style={{ background:C.bgWarm, borderRadius:10, padding:14, textAlign:"center", border:`1px solid ${C.border}` }}>
-              <p style={{ margin:0, fontSize:14, color:C.sage, fontWeight:600, fontFamily:sans }}>✓ ¡Gracias! Nos contactamos pronto 🌿</p>
+        {enCarrito
+          ? <div style={{ background:C.bgWarm, borderRadius:10, padding:12, textAlign:"center", border:`1px solid ${C.border}` }}>
+              <p style={{ margin:0, fontSize:13, color:C.sage, fontWeight:600, fontFamily:sans }}>✓ En tu carrito</p>
             </div>
-          : modo===null
-            ? <div style={{ display:"flex", gap:8 }}>
-                <button onClick={()=>setModo("reservar")} style={{ flex:1, background:"transparent", border:`1.5px solid ${C.brown}`, color:C.brown, borderRadius:8, padding:"11px", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:sans }}>Reservar</button>
-                <button onClick={()=>setModo("comprar")} style={{ flex:1, background:C.brown, border:"none", color:"#fff", borderRadius:8, padding:"11px", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:sans }}>Comprar</button>
-              </div>
-            : modo==="reservar"
-              ? <div style={{ background:C.bgWarm, borderRadius:12, padding:16, border:`1px solid ${C.border}` }}>
-                  <p style={{ margin:"0 0 14px", fontSize:15, fontWeight:600, color:C.brown, fontFamily:serif }}>Tus datos</p>
-                  <input placeholder="Tu nombre" value={form.nombre} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} style={{ ...inp(), marginBottom:8 }}/>
-                  <input placeholder="Tu celular" type="tel" value={form.cel} onChange={e=>setForm(f=>({...f,cel:e.target.value}))} style={{ ...inp(), marginBottom:14 }}/>
-                  <div style={{ display:"flex", gap:8 }}>
-                    <Btn variant="ghost" onClick={()=>setModo(null)}>Cancelar</Btn>
-                    <button onClick={confirmarReserva} style={{ flex:1, background:C.brown, color:"#fff", border:"none", borderRadius:8, padding:"11px", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:sans }}>Confirmar reserva</button>
-                  </div>
-                </div>
-              : <FormCompra p={p} onComprar={confirmarCompra} onCancelar={()=>setModo(null)}/>
+          : <button onClick={()=>onAgregarCarrito(p)} style={{ width:"100%", background:C.brown, color:"#fff", border:"none", borderRadius:8, padding:"12px", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:sans }}>
+              Agregar al carrito 🛍️
+            </button>
         }
       </div>
     </div>
   );
 }
 
-function VistaCliente({ prendas, onReservar, onComprar }){
+function VistaCarrito({ carrito, onQuitar, onComprar, onVolver, cliente }){
+  const [direccion, setDireccion] = useState({ departamento:"", direccion:"", tipo:"retira" });
+  const [enviando, setEnviando] = useState(false);
+  const [listo, setListo] = useState(false);
+  const total = carrito.reduce((s,p)=>s+p.precio,0);
+
+  const confirmar = async () => {
+    if(enviando) return;
+    if(direccion.tipo==="envio" && (!direccion.departamento||!direccion.direccion.trim())) return;
+    setEnviando(true);
+    await onComprar(carrito, direccion, total);
+    setListo(true);
+    setEnviando(false);
+  };
+
+  if(listo) return (
+    <div style={{ background:C.bg, minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:C.card, borderRadius:20, padding:32, maxWidth:400, width:"100%", textAlign:"center", border:`1px solid ${C.border}` }}>
+        <div style={{ fontSize:48, marginBottom:16 }}>🌿</div>
+        <h2 style={{ fontFamily:serif, color:C.brown, margin:"0 0 12px" }}>¡Pedido recibido!</h2>
+        <p style={{ fontFamily:sans, fontSize:14, color:C.muted, margin:"0 0 20px" }}>Te enviamos un mail con el resumen. Pronto nos comunicamos para coordinar los detalles.</p>
+        <Btn variant="primary" full onClick={onVolver}>Volver al catálogo</Btn>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ background:C.bg, minHeight:"100vh" }}>
+      <div style={{ background:C.brown, padding:"20px 20px" }}>
+        <div style={{ maxWidth:560, margin:"0 auto", display:"flex", alignItems:"center", gap:12 }}>
+          <button onClick={onVolver} style={{ background:"none", border:"none", color:"#fff", cursor:"pointer", fontSize:20, padding:0 }}>←</button>
+          <h2 style={{ margin:0, fontSize:20, fontWeight:700, color:"#fff", fontFamily:serif }}>Tu carrito</h2>
+        </div>
+      </div>
+      <div style={{ maxWidth:560, margin:"0 auto", padding:"20px 16px" }}>
+        {carrito.length === 0
+          ? <div style={{ textAlign:"center", padding:"80px 0" }}>
+              <div style={{ fontSize:48, marginBottom:16 }}>🛍️</div>
+              <p style={{ fontFamily:serif, fontSize:18, color:C.brown }}>Tu carrito está vacío</p>
+              <Btn variant="primary" onClick={onVolver} style={{ marginTop:16 }}>Ver catálogo</Btn>
+            </div>
+          : <>
+              {carrito.map(p=>(
+                <div key={p.id} style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, overflow:"hidden", marginBottom:12, display:"flex" }}>
+                  {p.fotos?.[0]
+                    ? <img src={p.fotos[0]} alt={p.nombre} style={{ width:88, height:88, objectFit:"cover", flexShrink:0 }}/>
+                    : <div style={{ width:88, height:88, background:C.bgWarm, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><span style={{ fontSize:28 }}>👗</span></div>
+                  }
+                  <div style={{ padding:"10px 14px", flex:1, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <div>
+                      <p style={{ margin:"0 0 2px", fontSize:15, fontWeight:700, color:C.brown, fontFamily:serif }}>{p.nombre}</p>
+                      <p style={{ margin:0, fontSize:13, color:C.muted, fontFamily:sans }}>Talle {p.talle} · {fmt(p.precio)}</p>
+                    </div>
+                    <button onClick={()=>onQuitar(p.id)} style={{ background:"none", border:"none", color:C.red, cursor:"pointer", fontSize:20, padding:4 }}>×</button>
+                  </div>
+                </div>
+              ))}
+
+              <div style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, padding:16, marginTop:8, marginBottom:16 }}>
+                <p style={{ margin:"0 0 12px", fontSize:15, fontWeight:700, color:C.brown, fontFamily:serif }}>Datos de entrega</p>
+                <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+                  {[["retira","Retiro en local"],["envio","Envío"]].map(([val,label])=>(
+                    <button key={val} onClick={()=>setDireccion(d=>({...d,tipo:val}))} style={{ flex:1, background:direccion.tipo===val?C.brown:C.card, border:`1.5px solid ${direccion.tipo===val?C.brown:C.border}`, color:direccion.tipo===val?"#fff":C.muted, borderRadius:8, padding:"10px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sans }}>{label}</button>
+                  ))}
+                </div>
+                {direccion.tipo==="envio" && (
+                  <>
+                    <select value={direccion.departamento} onChange={e=>setDireccion(d=>({...d,departamento:e.target.value}))} style={{ ...inp(), marginBottom:8 }}>
+                      <option value="">Seleccioná tu departamento</option>
+                      {DEPARTAMENTOS.map(d=><option key={d}>{d}</option>)}
+                    </select>
+                    <input placeholder="Dirección completa" value={direccion.direccion} onChange={e=>setDireccion(d=>({...d,direccion:e.target.value}))} style={inp()}/>
+                  </>
+                )}
+              </div>
+
+              <div style={{ background:C.bgWarm, borderRadius:14, border:`1px solid ${C.border}`, padding:16, marginBottom:16 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <p style={{ margin:0, fontSize:16, fontWeight:700, color:C.brown, fontFamily:serif }}>Total</p>
+                  <p style={{ margin:0, fontSize:20, fontWeight:700, color:C.accent, fontFamily:serif }}>{fmt(total)}</p>
+                </div>
+                <p style={{ margin:"6px 0 0", fontSize:12, color:C.muted, fontFamily:sans }}>Pago por transferencia bancaria</p>
+              </div>
+
+              <button onClick={confirmar} disabled={enviando} style={{ width:"100%", background:C.brown, color:"#fff", border:"none", borderRadius:8, padding:"14px", fontSize:15, fontWeight:600, cursor:enviando?"not-allowed":"pointer", fontFamily:sans, opacity:enviando?0.6:1 }}>
+                {enviando ? "Procesando..." : "Confirmar pedido"}
+              </button>
+            </>
+        }
+      </div>
+    </div>
+  );
+}
+
+function LoginCliente({ onLogin, onRegistro, onVolver }){
+  const [modo, setModo] = useState("login");
+  const [email, setEmail] = useState("");
+  const [pass, setPass]   = useState("");
+  const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
+  const [celular, setCelular] = useState("");
+  const [err, setErr]     = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const intentarLogin = async () => {
+    if(!email||!pass) return;
+    setLoading(true); setErr("");
+    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if(error){ setErr("Email o contraseña incorrectos"); }
+    else { onLogin(); }
+    setLoading(false);
+  };
+
+  const intentarRegistro = async () => {
+    if(!email||!pass||!nombre.trim()||!apellido.trim()||!celular.trim()) return;
+    setLoading(true); setErr("");
+    const { data, error } = await supabase.auth.signUp({ email, password: pass });
+    if(error){ setErr(error.message); setLoading(false); return; }
+    await supabase.from('clientes').insert([{
+      id: data.user.id,
+      nombre, apellido, celular, email
+    }]);
+    onRegistro();
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:C.card, borderRadius:20, padding:32, border:`1px solid ${C.border}`, maxWidth:380, width:"100%", boxShadow:"0 4px 24px #0000000f" }}>
+        <div style={{ fontSize:36, textAlign:"center", marginBottom:12 }}>🌿</div>
+        <h2 style={{ margin:"0 0 4px", fontFamily:serif, fontSize:22, color:C.brown, textAlign:"center" }}>El Ropero</h2>
+        <p style={{ margin:"0 0 24px", fontFamily:sans, fontSize:13, color:C.muted, textAlign:"center" }}>{modo==="login" ? "Ingresá para continuar" : "Creá tu cuenta"}</p>
+
+        {modo==="registro" && (
+          <>
+            <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+              <input placeholder="Nombre" value={nombre} onChange={e=>setNombre(e.target.value)} style={inp()}/>
+              <input placeholder="Apellido" value={apellido} onChange={e=>setApellido(e.target.value)} style={inp()}/>
+            </div>
+            <input placeholder="Celular" type="tel" value={celular} onChange={e=>setCelular(e.target.value)} style={{ ...inp(), marginBottom:8 }}/>
+          </>
+        )}
+
+        <input type="email" placeholder="Email" value={email} onChange={e=>{ setEmail(e.target.value); setErr(""); }} style={{ ...inp(), marginBottom:8 }}/>
+        <input type="password" placeholder="Contraseña" value={pass} onChange={e=>{ setPass(e.target.value); setErr(""); }} onKeyDown={e=>e.key==="Enter"&&(modo==="login"?intentarLogin():intentarRegistro())} style={{ ...inp(), marginBottom:10 }}/>
+
+        {err && <p style={{ margin:"0 0 10px", fontSize:13, color:C.red, fontFamily:sans }}>{err}</p>}
+
+        <Btn variant="primary" full onClick={modo==="login"?intentarLogin:intentarRegistro} disabled={loading}>
+          {loading ? "..." : modo==="login" ? "Ingresar" : "Crear cuenta"}
+        </Btn>
+
+        <p style={{ margin:"14px 0 0", fontSize:13, color:C.muted, fontFamily:sans, textAlign:"center" }}>
+          {modo==="login"
+            ? <>¿No tenés cuenta? <span onClick={()=>setModo("registro")} style={{ color:C.brown, cursor:"pointer", fontWeight:600 }}>Registrate</span></>
+            : <>¿Ya tenés cuenta? <span onClick={()=>setModo("login")} style={{ color:C.brown, cursor:"pointer", fontWeight:600 }}>Ingresá</span></>
+          }
+        </p>
+
+        <button onClick={onVolver} style={{ background:"none", border:"none", color:C.muted, cursor:"pointer", fontSize:13, fontFamily:sans, marginTop:12, display:"block", width:"100%", textAlign:"center" }}>← Volver al catálogo</button>
+      </div>
+    </div>
+  );
+}
+
+function VistaCliente({ prendas, carrito, onAgregarCarrito, onVerCarrito }){
   const [filtros, setFiltros] = useState({ cat:"", talle:"" });
   const visibles = prendas.filter(p => {
     if(p.estado !== "publicada") return false;
@@ -248,7 +326,7 @@ function VistaCliente({ prendas, onReservar, onComprar }){
   });
   return (
     <div style={{ background:C.bg, minHeight:"100vh" }}>
-      <HeaderPublico/>
+      <HeaderPublico carrito={carrito} onVerCarrito={onVerCarrito}/>
       <div style={{ maxWidth:560, margin:"0 auto", padding:"20px 16px" }}>
         <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
           <select value={filtros.cat} onChange={e=>setFiltros(f=>({...f,cat:e.target.value}))} style={{ ...inp({ width:"auto", padding:"8px 12px", fontSize:13 }) }}>
@@ -267,7 +345,7 @@ function VistaCliente({ prendas, onReservar, onComprar }){
               <p style={{ fontFamily:serif, fontSize:18, color:C.brown, margin:"0 0 8px" }}>No hay prendas disponibles</p>
               <p style={{ fontFamily:sans, fontSize:13, color:C.muted }}>Volvé pronto, ¡siempre llegan novedades!</p>
             </div>
-          : visibles.map(p=><CardCliente key={p.id} p={p} onReservar={onReservar} onComprar={onComprar}/>)
+          : visibles.map(p=><CardCliente key={p.id} p={p} enCarrito={carrito.some(c=>c.id===p.id)} onAgregarCarrito={onAgregarCarrito}/>)
         }
         <div style={{ textAlign:"center", padding:"30px 0 10px" }}>
           <Divider/>
@@ -388,17 +466,12 @@ function FormPrenda({ inicial, onGuardar, onCancelar }){
   );
 }
 
-function PanelAdmin({ prendas, onGuardar, onEliminar, onCambiarEstado, onSalir }){
+function PanelAdmin({ prendas, pedidos, onGuardar, onEliminar, onCambiarEstado, onCambiarEstadoPedido, onSalir }){
   const [editando, setEditando] = useState(null);
-  const [filtro, setFiltro] = useState("todas");
-  const filtradas = prendas.filter(p=>{
-    if(filtro==="borradores") return p.estado==="borrador";
-    if(filtro==="publicadas") return p.estado==="publicada";
-    if(filtro==="reservadas") return p.estado==="reservada";
-    if(filtro==="en_proceso") return p.estado==="en_proceso";
-    return true;
-  });
+  const [vista, setVista] = useState("pedidos");
+
   const guardar = (data) => { onGuardar(editando==="nueva" ? data : { ...prendas.find(p=>p.id===editando), ...data }); setEditando(null); };
+
   if(editando!==null){
     const inicial = editando==="nueva" ? null : prendas.find(p=>p.id===editando);
     return (
@@ -410,6 +483,7 @@ function PanelAdmin({ prendas, onGuardar, onEliminar, onCambiarEstado, onSalir }
       </div>
     );
   }
+
   return (
     <div style={{ background:C.bg, minHeight:"100vh" }}>
       <div style={{ background:C.brown, padding:"20px 20px 0" }}>
@@ -421,72 +495,101 @@ function PanelAdmin({ prendas, onGuardar, onEliminar, onCambiarEstado, onSalir }
             </div>
             <Btn variant="ghost" small onClick={onSalir} style={{ color:"#fff", borderColor:"#ffffff44" }}>Salir</Btn>
           </div>
-          <div style={{ display:"flex", gap:12, marginBottom:16 }}>
-            {[[prendas.length,"Total"],[prendas.filter(p=>p.estado==="publicada").length,"Publicadas"],[prendas.filter(p=>p.estado==="borrador").length,"Borradores"],[prendas.filter(p=>p.estado==="reservada").length,"Reservadas"],[prendas.filter(p=>p.estado==="en_proceso").length,"En proceso"]].map(([n,label])=>(
-              <div key={label} style={{ flex:1, background:"#ffffff18", borderRadius:10, padding:"10px 8px", textAlign:"center" }}>
-                <p style={{ margin:0, fontSize:20, fontWeight:800, color:"#fff", fontFamily:serif }}>{n}</p>
-                <p style={{ margin:0, fontSize:10, color:"#ffffff88", fontFamily:sans }}>{label}</p>
-              </div>
-            ))}
-          </div>
           <div style={{ display:"flex", gap:0, borderTop:"1px solid #ffffff22" }}>
-            {[["todas","Todas"],["publicadas","Publicadas"],["borradores","Borradores"],["reservadas","Reservadas"],["en_proceso","En proceso"]].map(([key,label])=>(
-              <button key={key} onClick={()=>setFiltro(key)} style={{ background:"none", border:"none", cursor:"pointer", padding:"10px 12px", fontSize:12, fontWeight:600, fontFamily:sans, color:filtro===key?"#fff":"#ffffff66", borderBottom:filtro===key?`2px solid ${C.accent}`:"2px solid transparent" }}>{label}</button>
+            {[["pedidos","Pedidos"],["prendas","Prendas"],["nueva","+ Nueva prenda"]].map(([key,label])=>(
+              <button key={key} onClick={()=>key==="nueva"?setEditando("nueva"):setVista(key)} style={{ background:"none", border:"none", cursor:"pointer", padding:"10px 14px", fontSize:12, fontWeight:600, fontFamily:sans, color:vista===key?"#fff":"#ffffff66", borderBottom:vista===key?`2px solid ${C.accent}`:"2px solid transparent" }}>{label}</button>
             ))}
           </div>
         </div>
       </div>
+
       <div style={{ maxWidth:560, margin:"0 auto", padding:"20px 16px" }}>
-        <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:16 }}>
-          <Btn variant="primary" onClick={()=>setEditando("nueva")}>+ Nueva prenda</Btn>
-        </div>
-        {filtradas.length===0
-          ? <div style={{ textAlign:"center", padding:"60px 0", color:C.muted }}>
-              <div style={{ fontSize:40, marginBottom:12 }}>📦</div>
-              <p style={{ fontFamily:serif, fontSize:16, color:C.brown }}>No hay prendas aquí</p>
-              <Btn variant="accent" onClick={()=>setEditando("nueva")} style={{ marginTop:16 }}>Agregar la primera</Btn>
-            </div>
-          : filtradas.map(p=>(
-            <div key={p.id} style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, overflow:"hidden", marginBottom:12, boxShadow:"0 1px 6px #0000000a" }}>
-              <div style={{ display:"flex" }}>
-                {p.fotos?.[0]
-                  ? <img src={p.fotos[0]} alt={p.nombre} style={{ width:88, height:88, objectFit:"cover", flexShrink:0 }}/>
-                  : <div style={{ width:88, height:88, background:C.bgWarm, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><span style={{ fontSize:28 }}>👗</span></div>
-                }
-                <div style={{ padding:"10px 14px", flex:1, minWidth:0 }}>
-                  <p style={{ margin:"0 0 2px", fontSize:15, fontWeight:700, color:C.brown, fontFamily:serif, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.nombre}</p>
-                  <p style={{ margin:"0 0 6px", fontSize:12, color:C.muted, fontFamily:sans }}>Talle {p.talle} · {fmt(p.precio)} · {p.vendedora}</p>
-                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                    {p.estado==="borrador"   && <Badge text="Borrador"    color={C.muted}/>}
-                    {p.estado==="publicada"  && <Badge text="Publicada"   color={C.sage}/>}
-                    {p.estado==="reservada"  && <Badge text="Reservada"   color={C.accent}/>}
-                    {p.estado==="en_proceso" && <Badge text="En proceso"  color={C.brown}/>}
-                    {p.estado==="vendida"    && <Badge text="Vendida"     color={C.green}/>}
+        {vista==="pedidos" && (
+          pedidos.length === 0
+            ? <div style={{ textAlign:"center", padding:"60px 0" }}>
+                <div style={{ fontSize:40, marginBottom:12 }}>📦</div>
+                <p style={{ fontFamily:serif, fontSize:16, color:C.brown }}>No hay pedidos aún</p>
+              </div>
+            : pedidos.map(ped => {
+                const prendas_ped = typeof ped.prendas === 'string' ? JSON.parse(ped.prendas) : ped.prendas;
+                const porVendedora = {};
+                prendas_ped.forEach(p => {
+                  if(!porVendedora[p.vendedora]) porVendedora[p.vendedora] = 0;
+                  porVendedora[p.vendedora] += p.precio;
+                });
+                return (
+                  <div key={ped.id} style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, marginBottom:16, overflow:"hidden" }}>
+                    <div style={{ padding:"14px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div>
+                        <p style={{ margin:"0 0 2px", fontSize:15, fontWeight:700, color:C.brown, fontFamily:serif }}>{ped.cliente_nombre} {ped.cliente_apellido}</p>
+                        <p style={{ margin:0, fontSize:12, color:C.muted, fontFamily:sans }}>{ped.cliente_email} · {ped.cliente_celular}</p>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <p style={{ margin:"0 0 4px", fontSize:16, fontWeight:700, color:C.accent, fontFamily:serif }}>{fmt(ped.monto_total)}</p>
+                        {ped.estado==="en_proceso" && <Badge text="En proceso" color={C.brown}/>}
+                        {ped.estado==="vendido"    && <Badge text="Vendido"    color={C.green}/>}
+                      </div>
+                    </div>
+                    <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}` }}>
+                      <p style={{ margin:"0 0 8px", fontSize:12, color:C.muted, fontWeight:600, fontFamily:sans, textTransform:"uppercase", letterSpacing:0.5 }}>Prendas</p>
+                      {prendas_ped.map((p,i)=>(
+                        <div key={i} style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                          <p style={{ margin:0, fontSize:13, color:C.brown, fontFamily:sans }}>{p.nombre} <span style={{ color:C.muted }}>({p.vendedora})</span></p>
+                          <p style={{ margin:0, fontSize:13, fontWeight:600, color:C.brown, fontFamily:sans }}>{fmt(p.precio)}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, background:C.bgWarm }}>
+                      <p style={{ margin:"0 0 6px", fontSize:12, color:C.muted, fontWeight:600, fontFamily:sans, textTransform:"uppercase", letterSpacing:0.5 }}>Monto por vendedora</p>
+                      {Object.entries(porVendedora).map(([v,m])=>(
+                        <div key={v} style={{ display:"flex", justifyContent:"space-between" }}>
+                          <p style={{ margin:"0 0 2px", fontSize:13, color:C.brown, fontFamily:sans }}>{v}</p>
+                          <p style={{ margin:"0 0 2px", fontSize:13, fontWeight:600, color:C.sage, fontFamily:sans }}>{fmt(m)}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ padding:"10px 16px", background:C.bgWarm, display:"flex", gap:8 }}>
+                      {ped.estado!=="vendido" && <Btn variant="success" small onClick={()=>onCambiarEstadoPedido(ped.id,"vendido")}>Marcar como vendido ✓</Btn>}
+                    </div>
+                  </div>
+                );
+              })
+        )}
+
+        {vista==="prendas" && (
+          prendas.length === 0
+            ? <div style={{ textAlign:"center", padding:"60px 0" }}>
+                <div style={{ fontSize:40, marginBottom:12 }}>📦</div>
+                <p style={{ fontFamily:serif, fontSize:16, color:C.brown }}>No hay prendas</p>
+              </div>
+            : prendas.map(p=>(
+              <div key={p.id} style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, overflow:"hidden", marginBottom:12 }}>
+                <div style={{ display:"flex" }}>
+                  {p.fotos?.[0]
+                    ? <img src={p.fotos[0]} alt={p.nombre} style={{ width:88, height:88, objectFit:"cover", flexShrink:0 }}/>
+                    : <div style={{ width:88, height:88, background:C.bgWarm, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><span style={{ fontSize:28 }}>👗</span></div>
+                  }
+                  <div style={{ padding:"10px 14px", flex:1, minWidth:0 }}>
+                    <p style={{ margin:"0 0 2px", fontSize:15, fontWeight:700, color:C.brown, fontFamily:serif, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.nombre}</p>
+                    <p style={{ margin:"0 0 6px", fontSize:12, color:C.muted, fontFamily:sans }}>Talle {p.talle} · {fmt(p.precio)} · {p.vendedora}</p>
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                      {p.estado==="borrador"   && <Badge text="Borrador"   color={C.muted}/>}
+                      {p.estado==="publicada"  && <Badge text="Publicada"  color={C.sage}/>}
+                      {p.estado==="en_proceso" && <Badge text="En proceso" color={C.brown}/>}
+                      {p.estado==="vendida"    && <Badge text="Vendida"    color={C.green}/>}
+                    </div>
                   </div>
                 </div>
-              </div>
-              {p.reserva_nombre && (
-                <div style={{ padding:"9px 14px", background:C.bgWarm, borderTop:`1px solid ${C.border}` }}>
-                  <p style={{ margin:0, fontSize:13, color:C.accent, fontWeight:600, fontFamily:sans }}>📩 {p.reserva_nombre} · {p.reserva_cel}</p>
+                <div style={{ padding:"10px 14px", display:"flex", gap:8, flexWrap:"wrap", borderTop:`1px solid ${C.border}`, background:C.bgWarm }}>
+                  <Btn variant="secondary" small onClick={()=>setEditando(p.id)}>✏️ Editar</Btn>
+                  {p.estado!=="publicada" && <Btn variant="sage"   small onClick={()=>onCambiarEstado(p.id,"publicada")}>Publicar</Btn>}
+                  {p.estado!=="borrador"  && <Btn variant="ghost"  small onClick={()=>onCambiarEstado(p.id,"borrador")}>Borrador</Btn>}
+                  {p.estado!=="vendida"   && <Btn variant="success" small onClick={()=>onCambiarEstado(p.id,"vendida")}>Vendida ✓</Btn>}
+                  <Btn variant="danger" small onClick={()=>onEliminar(p.id)}>Eliminar</Btn>
                 </div>
-              )}
-              {p.comprador_nombre && (
-                <div style={{ padding:"9px 14px", background:C.bgWarm, borderTop:`1px solid ${C.border}` }}>
-                  <p style={{ margin:"0 0 2px", fontSize:13, color:C.brown, fontWeight:600, fontFamily:sans }}>🛍️ {p.comprador_nombre} · {p.comprador_tel}</p>
-                  <p style={{ margin:0, fontSize:12, color:C.muted, fontFamily:sans }}>{p.metodo_pago} · {p.tipo_entrega==="retira"?"Retira en local":`Envío a ${p.departamento} - ${p.direccion}`}</p>
-                </div>
-              )}
-              <div style={{ padding:"10px 14px", display:"flex", gap:8, flexWrap:"wrap", borderTop:`1px solid ${C.border}`, background:C.bgWarm }}>
-                <Btn variant="secondary" small onClick={()=>setEditando(p.id)}>✏️ Editar</Btn>
-                {p.estado!=="publicada"  && <Btn variant="sage"    small onClick={()=>onCambiarEstado(p.id,"publicada")}>Publicar</Btn>}
-                {p.estado!=="borrador"   && <Btn variant="ghost"   small onClick={()=>onCambiarEstado(p.id,"borrador")}>Borrador</Btn>}
-                {p.estado==="publicada"  && <Btn variant="accent"  small onClick={()=>onCambiarEstado(p.id,"reservada")}>Reservada</Btn>}
-                {p.estado!=="vendida"    && <Btn variant="success"  small onClick={()=>onCambiarEstado(p.id,"vendida")}>Vendida ✓</Btn>}
-                <Btn variant="danger" small onClick={()=>onEliminar(p.id)}>Eliminar</Btn>
               </div>
-            </div>
-          ))
-        }
+            ))
+        )}
       </div>
     </div>
   );
@@ -522,14 +625,24 @@ function LoginAdmin({ onLogin, onVolver }){
 }
 
 export default function App(){
-  const [vista, setVista]     = useState("catalogo");
-  const [prendas, setPrendas] = useState([]);
-  const [adminOk, setAdminOk] = useState(false);
+  const [vista, setVista]       = useState("catalogo");
+  const [prendas, setPrendas]   = useState([]);
+  const [pedidos, setPedidos]   = useState([]);
+  const [carrito, setCarrito]   = useState([]);
+  const [adminOk, setAdminOk]   = useState(false);
+  const [cliente, setCliente]   = useState(null);
+  const [session, setSession]   = useState(null);
 
   useEffect(() => {
     cargarPrendas();
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if(session) setAdminOk(true);
+      setSession(session);
+      if(session) cargarCliente(session.user.id);
+    });
+    supabase.auth.onAuthStateChange((_,session) => {
+      setSession(session);
+      if(session) cargarCliente(session.user.id);
+      else setCliente(null);
     });
   }, []);
 
@@ -538,12 +651,19 @@ export default function App(){
     if(data) setPrendas(data);
   };
 
+  const cargarPedidos = async () => {
+    const { data } = await supabase.from('pedidos').select('*').order('created_at', { ascending: false });
+    if(data) setPedidos(data);
+  };
+
+  const cargarCliente = async (uid) => {
+    const { data } = await supabase.from('clientes').select('*').eq('id', uid).single();
+    if(data) setCliente(data);
+  };
+
   const upsertPrenda = async (data) => {
-    if(data.id){
-      await supabase.from('prendas').update({ ...data }).eq('id', data.id);
-    } else {
-      await supabase.from('prendas').insert([{ ...data }]);
-    }
+    if(data.id){ await supabase.from('prendas').update({ ...data }).eq('id', data.id); }
+    else { await supabase.from('prendas').insert([{ ...data }]); }
     cargarPrendas();
   };
 
@@ -558,53 +678,82 @@ export default function App(){
     cargarPrendas();
   };
 
-  const reservar = async (id, datos) => {
-    await supabase.from('prendas').update({ estado:"reservada", reserva_nombre: datos.nombre, reserva_cel: datos.cel }).eq('id', id);
-    cargarPrendas();
+  const cambiarEstadoPedido = async (id, estado) => {
+    await supabase.from('pedidos').update({ estado }).eq('id', id);
+    cargarPedidos();
   };
 
-  const comprar = async (prenda, datos) => {
-    await supabase.from('prendas').update({
-      estado: "en_proceso",
-      comprador_nombre: datos.nombre,
-      comprador_tel: datos.tel,
-      metodo_pago: datos.metodo_pago,
-      tipo_entrega: datos.tipo_entrega,
-      departamento: datos.departamento || null,
-      direccion: datos.direccion || null,
-    }).eq('id', prenda.id);
+  const agregarAlCarrito = (prenda) => {
+    if(!session){ setVista("login_cliente"); return; }
+    setCarrito(prev => prev.some(p=>p.id===prenda.id) ? prev : [...prev, prenda]);
+  };
 
-    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
-      prenda_nombre: prenda.nombre,
-      prenda_precio: fmt(prenda.precio),
-      vendedora: prenda.vendedora,
-      comprador_nombre: datos.nombre,
-      comprador_tel: datos.tel,
-      metodo_pago: datos.metodo_pago,
-      tipo_entrega: datos.tipo_entrega === "retira" ? "Retira en local" : "Envío",
-      departamento: datos.departamento || "N/A",
-      direccion: datos.direccion || "N/A",
+  const quitarDelCarrito = (id) => setCarrito(prev => prev.filter(p=>p.id!==id));
+
+  const comprar = async (carritoActual, direccion, total) => {
+    const prendas_data = carritoActual.map(p=>({ id:p.id, nombre:p.nombre, precio:p.precio, vendedora:p.vendedora }));
+
+    await supabase.from('pedidos').insert([{
+      cliente_id: session.user.id,
+      cliente_nombre: cliente?.nombre,
+      cliente_apellido: cliente?.apellido,
+      cliente_celular: cliente?.celular,
+      cliente_email: session.user.email,
+      prendas: prendas_data,
+      monto_total: total,
+      estado: "en_proceso",
+      tipo_entrega: direccion.tipo,
+      departamento: direccion.departamento || null,
+      direccion: direccion.direccion || null,
+    }]);
+
+    for(const p of carritoActual){
+      await supabase.from('prendas').update({ estado:"en_proceso" }).eq('id', p.id);
+    }
+
+    const prendasDetalle = carritoActual.map(p=>`• ${p.nombre} - ${fmt(p.precio)}`).join('\n');
+
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE_CLIENTE, {
+      cliente_nombre: cliente?.nombre || "Cliente",
+      cliente_email: session.user.email,
+      prendas_detalle: prendasDetalle,
+      monto_total: fmt(total),
     }, EMAILJS_KEY);
 
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE_ADMIN, {
+      prenda_nombre: carritoActual.map(p=>p.nombre).join(", "),
+      prenda_precio: fmt(total),
+      vendedora: carritoActual.map(p=>p.vendedora).join(", "),
+      comprador_nombre: `${cliente?.nombre} ${cliente?.apellido}`,
+      comprador_tel: cliente?.celular,
+      metodo_pago: "Transferencia",
+      tipo_entrega: direccion.tipo === "retira" ? "Retiro en local" : "Envío",
+      departamento: direccion.departamento || "N/A",
+      direccion: direccion.direccion || "N/A",
+    }, EMAILJS_KEY);
+
+    setCarrito([]);
     cargarPrendas();
   };
 
-  const onLogin = () => { setAdminOk(true); setVista("admin"); };
-  const onSalir = async () => { await supabase.auth.signOut(); setAdminOk(false); setVista("catalogo"); };
+  const onLoginAdmin = () => { setAdminOk(true); setVista("admin"); cargarPedidos(); };
+  const onSalirAdmin = async () => { await supabase.auth.signOut(); setAdminOk(false); setVista("catalogo"); };
 
   const BtnVendedoras = () => (
-    <button onClick={()=>setVista(adminOk?"admin":"login")}
+    <button onClick={()=>setVista(adminOk?"admin":"login_admin")}
       onMouseEnter={e=>e.currentTarget.style.opacity="0.5"}
       onMouseLeave={e=>e.currentTarget.style.opacity="0.1"}
       style={{ position:"fixed", bottom:10, right:14, background:"transparent", border:"none", color:C.muted, fontSize:18, cursor:"default", opacity:0.1, zIndex:100, padding:"4px", userSelect:"none", lineHeight:1 }}>·</button>
   );
 
-  if(vista==="login") return <LoginAdmin onLogin={onLogin} onVolver={()=>setVista("catalogo")}/>;
-  if(vista==="admin" && adminOk) return <PanelAdmin prendas={prendas} onGuardar={upsertPrenda} onEliminar={eliminar} onCambiarEstado={cambiarEstado} onSalir={onSalir}/>;
+  if(vista==="login_admin") return <LoginAdmin onLogin={onLoginAdmin} onVolver={()=>setVista("catalogo")}/>;
+  if(vista==="admin" && adminOk) return <PanelAdmin prendas={prendas} pedidos={pedidos} onGuardar={upsertPrenda} onEliminar={eliminar} onCambiarEstado={cambiarEstado} onCambiarEstadoPedido={cambiarEstadoPedido} onSalir={onSalirAdmin}/>;
+  if(vista==="login_cliente") return <LoginCliente onLogin={()=>{ setVista("catalogo"); }} onRegistro={()=>{ setVista("catalogo"); }} onVolver={()=>setVista("catalogo")}/>;
+  if(vista==="carrito") return <VistaCarrito carrito={carrito} onQuitar={quitarDelCarrito} onComprar={comprar} onVolver={()=>setVista("catalogo")} cliente={cliente}/>;
 
   return (
     <>
-      <VistaCliente prendas={prendas} onReservar={reservar} onComprar={comprar}/>
+      <VistaCliente prendas={prendas} carrito={carrito} onAgregarCarrito={agregarAlCarrito} onVerCarrito={()=>setVista("carrito")}/>
       <BtnVendedoras/>
     </>
   );
