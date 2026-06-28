@@ -2,15 +2,14 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import emailjs from "@emailjs/browser";
 
-const EMAILJS_SERVICE       = "service_5zjd20q";
+const EMAILJS_SERVICE        = "service_5zjd20q";
 const EMAILJS_TEMPLATE_ADMIN  = "template_08vj2xx";
 const EMAILJS_TEMPLATE_CLIENTE = "template_uzsmqwl";
-const EMAILJS_KEY           = "Zq_AhXWmfmSKAnUCf";
-const ADMIN_EMAIL           = "roperoseconhand@gmail.com";
+const EMAILJS_KEY            = "Zq_AhXWmfmSKAnUCf";
 
-const CATEGORIAS = ["Tops","Pantalones","Vestidos","Buzos / Camperas","Calzado","Accesorios","Otro"];
-const TALLES     = ["XS","S","M","L","XL","XXL","Único","35","36","37","38","39","40","41","42"];
-const CONDICIONES= ["Como nuevo","Con detalles","Usado"];
+const CATEGORIAS   = ["Tops","Pantalones","Vestidos","Buzos / Camperas","Calzado","Accesorios","Otro"];
+const TALLES       = ["XS","S","M","L","XL","XXL","Único","35","36","37","38","39","40","41","42"];
+const CONDICIONES  = ["Como nuevo","Con detalles","Usado"];
 const DEPARTAMENTOS = ["Artigas","Canelones","Cerro Largo","Colonia","Durazno","Flores","Florida","Lavalleja","Maldonado","Montevideo","Paysandú","Río Negro","Rivera","Rocha","Salto","San José","Soriano","Tacuarembó","Treinta y Tres"];
 
 const C = {
@@ -63,10 +62,111 @@ const Divider = () => (
   </div>
 );
 
-const HeaderPublico = ({ carrito, onVerCarrito }) => (
-  <div style={{ background:C.bg, borderBottom:`1px solid ${C.border}`, padding:"28px 20px 0", textAlign:"center" }}>
+// ── PANTALLA INICIAL ──────────────────────────────────────────────────────────
+function PantallaInicial({ onLogin, onRegistro, onInvitado }){
+  return (
+    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:C.card, borderRadius:20, padding:36, border:`1px solid ${C.border}`, maxWidth:380, width:"100%", textAlign:"center", boxShadow:"0 4px 24px #0000000f" }}>
+        <p style={{ margin:"0 0 4px", fontSize:10, color:C.muted, letterSpacing:4, textTransform:"uppercase", fontFamily:sans }}>· second hand ·</p>
+        <h1 style={{ margin:"0 0 4px", fontSize:36, fontWeight:700, color:C.brown, fontFamily:serif, letterSpacing:-0.5 }}>El Ropero</h1>
+        <p style={{ margin:"0 0 8px", fontSize:13, color:C.muted, fontStyle:"italic", fontFamily:serif }}>Ropa con historia, precios sin drama</p>
+        <Divider/>
+        <div style={{ height:24 }}/>
+        <Btn variant="primary" full onClick={onLogin} style={{ marginBottom:10 }}>Iniciar sesión</Btn>
+        <Btn variant="secondary" full onClick={onRegistro} style={{ marginBottom:10 }}>Registrarse</Btn>
+        <button onClick={onInvitado} style={{ background:"none", border:"none", color:C.muted, cursor:"pointer", fontSize:13, fontFamily:sans, width:"100%", padding:"8px" }}>
+          Continuar sin cuenta →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── LOGIN / REGISTRO ──────────────────────────────────────────────────────────
+function PantallaAuth({ modoInicial="login", onExito, onVolver }){
+  const [modo, setModo]       = useState(modoInicial);
+  const [email, setEmail]     = useState("");
+  const [pass, setPass]       = useState("");
+  const [nombre, setNombre]   = useState("");
+  const [apellido, setApellido] = useState("");
+  const [celular, setCelular] = useState("");
+  const [err, setErr]         = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const intentarLogin = async () => {
+    if(!email||!pass) return;
+    setLoading(true); setErr("");
+    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if(error){ setErr("Email o contraseña incorrectos"); }
+    else { onExito(email); }
+    setLoading(false);
+  };
+
+  const intentarRegistro = async () => {
+    if(!email||!pass||!nombre.trim()||!apellido.trim()||!celular.trim()) return;
+    setLoading(true); setErr("");
+    const { data, error } = await supabase.auth.signUp({ email, password: pass });
+    if(error){ setErr(error.message); setLoading(false); return; }
+    await supabase.from('clientes').insert([{ id: data.user.id, nombre, apellido, celular, email }]);
+    onExito(email);
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:C.card, borderRadius:20, padding:32, border:`1px solid ${C.border}`, maxWidth:380, width:"100%", boxShadow:"0 4px 24px #0000000f" }}>
+        <div style={{ fontSize:36, textAlign:"center", marginBottom:12 }}>🌿</div>
+        <h2 style={{ margin:"0 0 4px", fontFamily:serif, fontSize:22, color:C.brown, textAlign:"center" }}>El Ropero</h2>
+        <p style={{ margin:"0 0 24px", fontFamily:sans, fontSize:13, color:C.muted, textAlign:"center" }}>
+          {modo==="login" ? "Ingresá con tu cuenta" : "Creá tu cuenta"}
+        </p>
+
+        {modo==="registro" && (
+          <>
+            <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+              <input placeholder="Nombre" value={nombre} onChange={e=>setNombre(e.target.value)} style={inp()}/>
+              <input placeholder="Apellido" value={apellido} onChange={e=>setApellido(e.target.value)} style={inp()}/>
+            </div>
+            <input placeholder="Celular" type="tel" value={celular} onChange={e=>setCelular(e.target.value)} style={{ ...inp(), marginBottom:8 }}/>
+          </>
+        )}
+
+        <input type="email" placeholder="Email" value={email} onChange={e=>{ setEmail(e.target.value); setErr(""); }} style={{ ...inp(), marginBottom:8 }}/>
+        <input type="password" placeholder="Contraseña" value={pass} onChange={e=>{ setPass(e.target.value); setErr(""); }}
+          onKeyDown={e=>e.key==="Enter"&&(modo==="login"?intentarLogin():intentarRegistro())}
+          style={{ ...inp(), marginBottom:10 }}/>
+
+        {err && <p style={{ margin:"0 0 10px", fontSize:13, color:C.red, fontFamily:sans }}>{err}</p>}
+
+        <Btn variant="primary" full onClick={modo==="login"?intentarLogin:intentarRegistro} disabled={loading}>
+          {loading ? "..." : modo==="login" ? "Ingresar" : "Crear cuenta"}
+        </Btn>
+
+        <p style={{ margin:"14px 0 0", fontSize:13, color:C.muted, fontFamily:sans, textAlign:"center" }}>
+          {modo==="login"
+            ? <>¿No tenés cuenta? <span onClick={()=>setModo("registro")} style={{ color:C.brown, cursor:"pointer", fontWeight:600 }}>Registrate</span></>
+            : <>¿Ya tenés cuenta? <span onClick={()=>setModo("login")} style={{ color:C.brown, cursor:"pointer", fontWeight:600 }}>Ingresá</span></>
+          }
+        </p>
+
+        <button onClick={onVolver} style={{ background:"none", border:"none", color:C.muted, cursor:"pointer", fontSize:13, fontFamily:sans, marginTop:12, display:"block", width:"100%", textAlign:"center" }}>
+          ← Volver
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const HeaderPublico = ({ carrito, onVerCarrito, session, onLogin, onSalir }) => (
+  <div style={{ background:C.bg, borderBottom:`1px solid ${C.border}`, padding:"20px 20px 0", textAlign:"center" }}>
     <div style={{ maxWidth:560, margin:"0 auto" }}>
-      <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:4 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+        <div style={{ fontSize:13, fontFamily:sans, color:C.muted }}>
+          {session
+            ? <button onClick={onSalir} style={{ background:"none", border:"none", color:C.muted, cursor:"pointer", fontSize:12, fontFamily:sans }}>Salir</button>
+            : <button onClick={onLogin} style={{ background:"none", border:"none", color:C.brown, cursor:"pointer", fontSize:12, fontFamily:sans, fontWeight:600 }}>Iniciar sesión</button>
+          }
+        </div>
         <button onClick={onVerCarrito} style={{ background:"none", border:"none", cursor:"pointer", position:"relative", padding:4 }}>
           <span style={{ fontSize:22 }}>🛍️</span>
           {carrito.length > 0 && (
@@ -208,7 +308,6 @@ function VistaCarrito({ carrito, onQuitar, onComprar, onVolver, cliente }){
                   </div>
                 </div>
               ))}
-
               <div style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, padding:16, marginTop:8, marginBottom:16 }}>
                 <p style={{ margin:"0 0 12px", fontSize:15, fontWeight:700, color:C.brown, fontFamily:serif }}>Datos de entrega</p>
                 <div style={{ display:"flex", gap:8, marginBottom:12 }}>
@@ -226,7 +325,6 @@ function VistaCarrito({ carrito, onQuitar, onComprar, onVolver, cliente }){
                   </>
                 )}
               </div>
-
               <div style={{ background:C.bgWarm, borderRadius:14, border:`1px solid ${C.border}`, padding:16, marginBottom:16 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                   <p style={{ margin:0, fontSize:16, fontWeight:700, color:C.brown, fontFamily:serif }}>Total</p>
@@ -234,7 +332,6 @@ function VistaCarrito({ carrito, onQuitar, onComprar, onVolver, cliente }){
                 </div>
                 <p style={{ margin:"6px 0 0", fontSize:12, color:C.muted, fontFamily:sans }}>Pago por transferencia bancaria</p>
               </div>
-
               <button onClick={confirmar} disabled={enviando} style={{ width:"100%", background:C.brown, color:"#fff", border:"none", borderRadius:8, padding:"14px", fontSize:15, fontWeight:600, cursor:enviando?"not-allowed":"pointer", fontFamily:sans, opacity:enviando?0.6:1 }}>
                 {enviando ? "Procesando..." : "Confirmar pedido"}
               </button>
@@ -245,78 +342,7 @@ function VistaCarrito({ carrito, onQuitar, onComprar, onVolver, cliente }){
   );
 }
 
-function LoginCliente({ onLogin, onRegistro, onVolver }){
-  const [modo, setModo] = useState("login");
-  const [email, setEmail] = useState("");
-  const [pass, setPass]   = useState("");
-  const [nombre, setNombre] = useState("");
-  const [apellido, setApellido] = useState("");
-  const [celular, setCelular] = useState("");
-  const [err, setErr]     = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const intentarLogin = async () => {
-    if(!email||!pass) return;
-    setLoading(true); setErr("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-    if(error){ setErr("Email o contraseña incorrectos"); }
-    else { onLogin(); }
-    setLoading(false);
-  };
-
-  const intentarRegistro = async () => {
-    if(!email||!pass||!nombre.trim()||!apellido.trim()||!celular.trim()) return;
-    setLoading(true); setErr("");
-    const { data, error } = await supabase.auth.signUp({ email, password: pass });
-    if(error){ setErr(error.message); setLoading(false); return; }
-    await supabase.from('clientes').insert([{
-      id: data.user.id,
-      nombre, apellido, celular, email
-    }]);
-    onRegistro();
-    setLoading(false);
-  };
-
-  return (
-    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-      <div style={{ background:C.card, borderRadius:20, padding:32, border:`1px solid ${C.border}`, maxWidth:380, width:"100%", boxShadow:"0 4px 24px #0000000f" }}>
-        <div style={{ fontSize:36, textAlign:"center", marginBottom:12 }}>🌿</div>
-        <h2 style={{ margin:"0 0 4px", fontFamily:serif, fontSize:22, color:C.brown, textAlign:"center" }}>El Ropero</h2>
-        <p style={{ margin:"0 0 24px", fontFamily:sans, fontSize:13, color:C.muted, textAlign:"center" }}>{modo==="login" ? "Ingresá para continuar" : "Creá tu cuenta"}</p>
-
-        {modo==="registro" && (
-          <>
-            <div style={{ display:"flex", gap:8, marginBottom:8 }}>
-              <input placeholder="Nombre" value={nombre} onChange={e=>setNombre(e.target.value)} style={inp()}/>
-              <input placeholder="Apellido" value={apellido} onChange={e=>setApellido(e.target.value)} style={inp()}/>
-            </div>
-            <input placeholder="Celular" type="tel" value={celular} onChange={e=>setCelular(e.target.value)} style={{ ...inp(), marginBottom:8 }}/>
-          </>
-        )}
-
-        <input type="email" placeholder="Email" value={email} onChange={e=>{ setEmail(e.target.value); setErr(""); }} style={{ ...inp(), marginBottom:8 }}/>
-        <input type="password" placeholder="Contraseña" value={pass} onChange={e=>{ setPass(e.target.value); setErr(""); }} onKeyDown={e=>e.key==="Enter"&&(modo==="login"?intentarLogin():intentarRegistro())} style={{ ...inp(), marginBottom:10 }}/>
-
-        {err && <p style={{ margin:"0 0 10px", fontSize:13, color:C.red, fontFamily:sans }}>{err}</p>}
-
-        <Btn variant="primary" full onClick={modo==="login"?intentarLogin:intentarRegistro} disabled={loading}>
-          {loading ? "..." : modo==="login" ? "Ingresar" : "Crear cuenta"}
-        </Btn>
-
-        <p style={{ margin:"14px 0 0", fontSize:13, color:C.muted, fontFamily:sans, textAlign:"center" }}>
-          {modo==="login"
-            ? <>¿No tenés cuenta? <span onClick={()=>setModo("registro")} style={{ color:C.brown, cursor:"pointer", fontWeight:600 }}>Registrate</span></>
-            : <>¿Ya tenés cuenta? <span onClick={()=>setModo("login")} style={{ color:C.brown, cursor:"pointer", fontWeight:600 }}>Ingresá</span></>
-          }
-        </p>
-
-        <button onClick={onVolver} style={{ background:"none", border:"none", color:C.muted, cursor:"pointer", fontSize:13, fontFamily:sans, marginTop:12, display:"block", width:"100%", textAlign:"center" }}>← Volver al catálogo</button>
-      </div>
-    </div>
-  );
-}
-
-function VistaCliente({ prendas, carrito, onAgregarCarrito, onVerCarrito }){
+function VistaCliente({ prendas, carrito, onAgregarCarrito, onVerCarrito, session, onLogin, onSalir }){
   const [filtros, setFiltros] = useState({ cat:"", talle:"" });
   const visibles = prendas.filter(p => {
     if(p.estado !== "publicada") return false;
@@ -326,7 +352,7 @@ function VistaCliente({ prendas, carrito, onAgregarCarrito, onVerCarrito }){
   });
   return (
     <div style={{ background:C.bg, minHeight:"100vh" }}>
-      <HeaderPublico carrito={carrito} onVerCarrito={onVerCarrito}/>
+      <HeaderPublico carrito={carrito} onVerCarrito={onVerCarrito} session={session} onLogin={onLogin} onSalir={onSalir}/>
       <div style={{ maxWidth:560, margin:"0 auto", padding:"20px 16px" }}>
         <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
           <select value={filtros.cat} onChange={e=>setFiltros(f=>({...f,cat:e.target.value}))} style={{ ...inp({ width:"auto", padding:"8px 12px", fontSize:13 }) }}>
@@ -548,7 +574,10 @@ function PanelAdmin({ prendas, pedidos, onGuardar, onEliminar, onCambiarEstado, 
                         </div>
                       ))}
                     </div>
-                    <div style={{ padding:"10px 16px", background:C.bgWarm, display:"flex", gap:8 }}>
+                    <div style={{ padding:"10px 16px", background:C.bgWarm }}>
+                      <p style={{ margin:"0 0 6px", fontSize:12, color:C.muted, fontFamily:sans }}>
+                        {ped.tipo_entrega==="retira" ? "🏠 Retira en local" : `📦 Envío a ${ped.departamento} - ${ped.direccion}`}
+                      </p>
                       {ped.estado!=="vendido" && <Btn variant="success" small onClick={()=>onCambiarEstadoPedido(ped.id,"vendido")}>Marcar como vendido ✓</Btn>}
                     </div>
                   </div>
@@ -595,56 +624,32 @@ function PanelAdmin({ prendas, pedidos, onGuardar, onEliminar, onCambiarEstado, 
   );
 }
 
-function LoginAdmin({ onLogin, onVolver }){
-  const [email, setEmail] = useState("");
-  const [pass, setPass]   = useState("");
-  const [err, setErr]     = useState("");
-  const [loading, setLoading] = useState(false);
-  const intentar = async () => {
-    if(!email||!pass) return;
-    setLoading(true); setErr("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-    if(error){ setErr("Email o contraseña incorrectos"); setPass(""); }
-    else { onLogin(); }
-    setLoading(false);
-  };
-  return (
-    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-      <div style={{ background:C.card, borderRadius:20, padding:32, border:`1px solid ${C.border}`, maxWidth:360, width:"100%", textAlign:"center", boxShadow:"0 4px 24px #0000000f" }}>
-        <div style={{ fontSize:40, marginBottom:12 }}>🔒</div>
-        <h2 style={{ margin:"0 0 4px", fontFamily:serif, fontSize:22, color:C.brown }}>Área de vendedoras</h2>
-        <p style={{ margin:"0 0 24px", fontFamily:sans, fontSize:13, color:C.muted }}>Ingresá con tu cuenta para continuar</p>
-        <input type="email" placeholder="Email" value={email} onChange={e=>{ setEmail(e.target.value); setErr(""); }} style={{ ...inp(), marginBottom:8 }}/>
-        <input type="password" placeholder="Contraseña" value={pass} onChange={e=>{ setPass(e.target.value); setErr(""); }} onKeyDown={e=>e.key==="Enter"&&intentar()} style={{ ...inp(), marginBottom:10 }}/>
-        {err && <p style={{ margin:"0 0 10px", fontSize:13, color:C.red, fontFamily:sans }}>{err}</p>}
-        <Btn variant="primary" full onClick={intentar} disabled={loading}>{loading?"Ingresando...":"Entrar"}</Btn>
-        <button onClick={onVolver} style={{ background:"none", border:"none", color:C.muted, cursor:"pointer", fontSize:13, fontFamily:sans, marginTop:16, display:"block", width:"100%" }}>← Volver al catálogo</button>
-      </div>
-    </div>
-  );
-}
-
 export default function App(){
-  const [vista, setVista]       = useState("catalogo");
-  const [prendas, setPrendas]   = useState([]);
-  const [pedidos, setPedidos]   = useState([]);
-  const [carrito, setCarrito]   = useState([]);
-  const [adminOk, setAdminOk]   = useState(false);
-  const [cliente, setCliente]   = useState(null);
-  const [session, setSession]   = useState(null);
+  const [vista, setVista]     = useState("inicio");
+  const [prendas, setPrendas] = useState([]);
+  const [pedidos, setPedidos] = useState([]);
+  const [carrito, setCarrito] = useState([]);
+  const [session, setSession] = useState(null);
+  const [cliente, setCliente] = useState(null);
+  const [esAdmin, setEsAdmin] = useState(false);
 
   useEffect(() => {
     cargarPrendas();
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if(session) cargarCliente(session.user.id);
+      if(session) handleSession(session);
     });
-    supabase.auth.onAuthStateChange((_,session) => {
-      setSession(session);
-      if(session) cargarCliente(session.user.id);
-      else setCliente(null);
+    supabase.auth.onAuthStateChange((_, session) => {
+      if(session) handleSession(session);
+      else { setSession(null); setCliente(null); setEsAdmin(false); }
     });
   }, []);
+
+  const handleSession = async (session) => {
+    setSession(session);
+    const { data } = await supabase.from('admins').select('email').eq('email', session.user.email).single();
+    if(data){ setEsAdmin(true); cargarPedidos(); setVista("admin"); }
+    else { setEsAdmin(false); cargarCliente(session.user.id); setVista("catalogo"); }
+  };
 
   const cargarPrendas = async () => {
     const { data } = await supabase.from('prendas').select('*').order('created_at', { ascending: false });
@@ -684,7 +689,7 @@ export default function App(){
   };
 
   const agregarAlCarrito = (prenda) => {
-    if(!session){ setVista("login_cliente"); return; }
+    if(!session){ setVista("auth_login"); return; }
     setCarrito(prev => prev.some(p=>p.id===prenda.id) ? prev : [...prev, prenda]);
   };
 
@@ -692,7 +697,6 @@ export default function App(){
 
   const comprar = async (carritoActual, direccion, total) => {
     const prendas_data = carritoActual.map(p=>({ id:p.id, nombre:p.nombre, precio:p.precio, vendedora:p.vendedora }));
-
     await supabase.from('pedidos').insert([{
       cliente_id: session.user.id,
       cliente_nombre: cliente?.nombre,
@@ -706,20 +710,16 @@ export default function App(){
       departamento: direccion.departamento || null,
       direccion: direccion.direccion || null,
     }]);
-
     for(const p of carritoActual){
       await supabase.from('prendas').update({ estado:"en_proceso" }).eq('id', p.id);
     }
-
     const prendasDetalle = carritoActual.map(p=>`• ${p.nombre} - ${fmt(p.precio)}`).join('\n');
-
     await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE_CLIENTE, {
       cliente_nombre: cliente?.nombre || "Cliente",
       cliente_email: session.user.email,
       prendas_detalle: prendasDetalle,
       monto_total: fmt(total),
     }, EMAILJS_KEY);
-
     await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE_ADMIN, {
       prenda_nombre: carritoActual.map(p=>p.nombre).join(", "),
       prenda_precio: fmt(total),
@@ -731,30 +731,31 @@ export default function App(){
       departamento: direccion.departamento || "N/A",
       direccion: direccion.direccion || "N/A",
     }, EMAILJS_KEY);
-
     setCarrito([]);
     cargarPrendas();
   };
 
-  const onLoginAdmin = () => { setAdminOk(true); setVista("admin"); cargarPedidos(); };
-  const onSalirAdmin = async () => { await supabase.auth.signOut(); setAdminOk(false); setVista("catalogo"); };
+  const salir = async () => {
+    await supabase.auth.signOut();
+    setSession(null); setCliente(null); setEsAdmin(false);
+    setCarrito([]);
+    setVista("inicio");
+  };
 
-  const BtnVendedoras = () => (
-    <button onClick={()=>setVista(adminOk?"admin":"login_admin")}
-      onMouseEnter={e=>e.currentTarget.style.opacity="0.5"}
-      onMouseLeave={e=>e.currentTarget.style.opacity="0.1"}
-      style={{ position:"fixed", bottom:10, right:14, background:"transparent", border:"none", color:C.muted, fontSize:18, cursor:"default", opacity:0.1, zIndex:100, padding:"4px", userSelect:"none", lineHeight:1 }}>·</button>
-  );
-
-  if(vista==="login_admin") return <LoginAdmin onLogin={onLoginAdmin} onVolver={()=>setVista("catalogo")}/>;
-  if(vista==="admin" && adminOk) return <PanelAdmin prendas={prendas} pedidos={pedidos} onGuardar={upsertPrenda} onEliminar={eliminar} onCambiarEstado={cambiarEstado} onCambiarEstadoPedido={cambiarEstadoPedido} onSalir={onSalirAdmin}/>;
-  if(vista==="login_cliente") return <LoginCliente onLogin={()=>{ setVista("catalogo"); }} onRegistro={()=>{ setVista("catalogo"); }} onVolver={()=>setVista("catalogo")}/>;
+  if(vista==="inicio") return <PantallaInicial onLogin={()=>setVista("auth_login")} onRegistro={()=>setVista("auth_registro")} onInvitado={()=>setVista("catalogo")}/>;
+  if(vista==="auth_login") return <PantallaAuth modoInicial="login" onExito={(email)=>{ }} onVolver={()=>setVista(session?"catalogo":"inicio")}/>;
+  if(vista==="auth_registro") return <PantallaAuth modoInicial="registro" onExito={(email)=>{ }} onVolver={()=>setVista("inicio")}/>;
+  if(vista==="admin" && esAdmin) return <PanelAdmin prendas={prendas} pedidos={pedidos} onGuardar={upsertPrenda} onEliminar={eliminar} onCambiarEstado={cambiarEstado} onCambiarEstadoPedido={cambiarEstadoPedido} onSalir={salir}/>;
   if(vista==="carrito") return <VistaCarrito carrito={carrito} onQuitar={quitarDelCarrito} onComprar={comprar} onVolver={()=>setVista("catalogo")} cliente={cliente}/>;
 
   return (
-    <>
-      <VistaCliente prendas={prendas} carrito={carrito} onAgregarCarrito={agregarAlCarrito} onVerCarrito={()=>setVista("carrito")}/>
-      <BtnVendedoras/>
-    </>
+    <VistaCliente
+      prendas={prendas} carrito={carrito}
+      onAgregarCarrito={agregarAlCarrito}
+      onVerCarrito={()=>setVista("carrito")}
+      session={session}
+      onLogin={()=>setVista("auth_login")}
+      onSalir={salir}
+    />
   );
 }
