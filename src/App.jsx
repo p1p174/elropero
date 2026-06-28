@@ -10,7 +10,7 @@ const ADMIN_EMAIL           = "roperoseconhand@gmail.com";
 
 const CATEGORIAS = ["Tops","Pantalones","Vestidos","Buzos / Camperas","Calzado","Accesorios","Otro"];
 const TALLES     = ["XS","S","M","L","XL","XXL","Único","35","36","37","38","39","40","41","42"];
-const CONDICIONES= ["Como nuevo","Muy bueno","Bueno"];
+const CONDICIONES= ["Como nuevo","Con detalles","Usado"];
 const DEPARTAMENTOS = ["Artigas","Canelones","Cerro Largo","Colonia","Durazno","Flores","Florida","Lavalleja","Maldonado","Montevideo","Paysandú","Río Negro","Rivera","Rocha","Salto","San José","Soriano","Tacuarembó","Treinta y Tres"];
 
 const C = {
